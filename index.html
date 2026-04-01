@@ -3,690 +3,588 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NYS Cannabis Map</title>
+<title>NYS Cannabis — Opt-Out & Dispensary Saturation</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
-
-:root {
-  --bg:      #07090f;
-  --s1:      #0d1220;
-  --s2:      #131a2c;
-  --s3:      #1a2438;
-  --border:  #1e2d48;
-  --text:    #b0c4de;
-  --muted:   #3a5272;
-  --green:   #00d990;
-  --amber:   #f5a623;
-  --pink:    #e03868;
-  --blue:    #3b8deb;
-  --white:   #eaf0fc;
-}
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-html, body {
-  height: 100%;
-  background: var(--bg);
-  color: var(--text);
-  font-family: 'DM Sans', sans-serif;
-  overflow: hidden;
-  font-size: 13px;
-}
-
-#app { display: flex; flex-direction: column; height: 100vh; }
-
-/* ── Header ── */
-.hdr {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 18px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  background: var(--s1);
-}
-.hdr-left h1 {
-  font-family: 'Space Mono', monospace;
-  font-size: 11px;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--white);
-  line-height: 1.3;
-}
-.hdr-left p {
-  font-family: 'Space Mono', monospace;
-  font-size: 9px;
-  color: var(--muted);
-  letter-spacing: .08em;
-  margin-top: 2px;
-}
-
-/* ── Stats Strip ── */
-.stats {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-  background: var(--s1);
-}
-.stat {
-  flex: 1;
-  padding: 8px 16px;
-  border-right: 1px solid var(--border);
-}
-.stat:last-child { border-right: none; }
-.stat-n {
-  font-family: 'Space Mono', monospace;
-  font-size: 18px;
-  font-weight: 700;
-  line-height: 1.1;
-}
-.stat-l {
-  font-size: 9px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .07em;
-  margin-top: 2px;
-}
-
-/* ── Body ── */
-.body { display: flex; flex: 1; overflow: hidden; min-height: 0; }
-
-/* ── Map ── */
-#mw {
-  flex: 1;
-  position: relative;
-  overflow: hidden;
-  background: var(--bg);
-  cursor: grab;
-}
-#mw:active { cursor: grabbing; }
-#map { width: 100%; height: 100%; display: block; }
-
-.county-path {
-  stroke: #0f1826;
-  stroke-width: .6;
-  cursor: crosshair;
-}
-
-/* ── Tooltip ── */
-#tt {
-  position: absolute;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity .1s;
-  background: var(--s2);
-  border: 1px solid var(--border);
-  border-radius: 5px;
-  padding: 10px 13px;
-  min-width: 175px;
-  z-index: 999;
-  font-size: 11px;
-}
-#tt.vis { opacity: 1; }
-.tt-name {
-  font-family: 'Space Mono', monospace;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--white);
-  margin-bottom: 6px;
-  padding-bottom: 5px;
-  border-bottom: 1px solid var(--border);
-}
-.tt-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 3px;
-}
-.tt-val {
-  font-family: 'Space Mono', monospace;
-  font-size: 10px;
-  font-weight: 700;
-}
-.tt-badge {
-  font-size: 9px;
-  font-family: 'Space Mono', monospace;
-  padding: 1px 5px;
-  border-radius: 2px;
-  margin-top: 5px;
-  display: inline-block;
-}
-
-/* ── Zoom btns ── */
-.zbg {
-  position: absolute;
-  left: 14px;
-  bottom: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  z-index: 10;
-}
-.zb {
-  width: 26px;
-  height: 26px;
-  background: var(--s2);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 3px;
-  cursor: pointer;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-  font-family: 'Space Mono', monospace;
-  transition: background .1s;
-}
-.zb:hover { background: var(--s3); color: var(--white); }
-
-/* ── NYC Hint ── */
-.hint {
-  position: absolute;
-  right: 14px;
-  bottom: 14px;
-  font-family: 'Space Mono', monospace;
-  font-size: 9px;
-  color: var(--muted);
-  letter-spacing: .06em;
-  z-index: 10;
-  text-align: right;
-  line-height: 1.6;
-}
-
-/* ── Sidebar ── */
-.panel {
-  width: 188px;
-  flex-shrink: 0;
-  border-left: 1px solid var(--border);
-  background: var(--s1);
-  padding: 14px 13px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  overflow-y: auto;
-}
-.ps-title {
-  font-family: 'Space Mono', monospace;
-  font-size: 9px;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
-
-/* Toggles */
-.tog {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 5px 8px;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-  width: 100%;
-  font-size: 11px;
-  font-family: 'DM Sans', sans-serif;
-  margin-bottom: 3px;
-  transition: background .12s, border-color .12s;
-  text-align: left;
-}
-.tog.on { background: var(--s2); border-color: #2a3e5c; }
-.tog .dot {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-/* Legend gradient */
-.grad {
-  height: 8px;
-  border-radius: 2px;
-  margin: 5px 0 3px;
-}
-.grad-lbl {
-  display: flex;
-  justify-content: space-between;
-  font-size: 9px;
-  color: var(--muted);
-  font-family: 'Space Mono', monospace;
-}
-
-/* Bubble legend */
-.bki { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; font-size: 10px; }
-
-.note-txt {
-  font-size: 9px;
-  color: var(--muted);
-  font-family: 'Space Mono', monospace;
-  line-height: 1.7;
-}
-
-/* Region bar chart */
-.rbr { margin-bottom: 6px; }
-.rbr-label {
-  display: flex;
-  justify-content: space-between;
-  font-size: 9px;
-  color: var(--text);
-  margin-bottom: 2px;
-}
-.rbr-bar-bg {
-  height: 5px;
-  background: var(--s3);
-  border-radius: 2px;
-  overflow: hidden;
-}
-.rbr-bar-fill {
-  height: 100%;
-  border-radius: 2px;
-  background: var(--green);
-  transition: width .3s;
-}
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap');
+:root{--bg:#07090f;--s1:#0d1220;--s2:#131a2c;--s3:#1a2438;--bd:#1e2d48;--tx:#b0c4de;--mu:#3a5272;--gr:#00d990;--am:#f5a623;--pk:#e03868;--wh:#eaf0fc;}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;background:var(--bg);color:var(--tx);font-family:'DM Sans',sans-serif;overflow:hidden;}
+#app{display:flex;flex-direction:column;height:100vh;}
+.hdr{display:flex;align-items:center;padding:9px 18px;border-bottom:1px solid var(--bd);background:var(--s1);flex-shrink:0;}
+.hdr h1{font-family:'Space Mono',monospace;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--wh);}
+.hdr p{font-family:'Space Mono',monospace;font-size:9px;color:var(--mu);letter-spacing:.08em;margin-top:2px;}
+.stats{display:flex;border-bottom:1px solid var(--bd);background:var(--s1);flex-shrink:0;}
+.stat{flex:1;padding:7px 14px;border-right:1px solid var(--bd);}
+.stat:last-child{border-right:none;}
+.stat-n{font-family:'Space Mono',monospace;font-size:18px;font-weight:700;line-height:1.1;}
+.stat-l{font-size:9px;color:var(--mu);text-transform:uppercase;letter-spacing:.07em;margin-top:2px;}
+.body{display:flex;flex:1;overflow:hidden;min-height:0;}
+#mw{flex:1;position:relative;overflow:hidden;background:var(--bg);}
+#map{width:100%;height:100%;display:block;}
+.county-path{stroke:#0c1522;stroke-width:.5;cursor:pointer;}
+.county-path:hover{filter:brightness(1.3);}
+.vor-cell{stroke:#040c14;stroke-width:.22;cursor:pointer;}
+.vor-cell:hover{filter:brightness(1.4);}
+#tt{position:absolute;pointer-events:none;opacity:0;transition:opacity .07s;background:var(--s2);border:1px solid var(--bd);border-radius:5px;padding:9px 12px;min-width:172px;z-index:999;font-size:11px;}
+#tt.vis{opacity:1;}
+.tt-name{font-family:'Space Mono',monospace;font-size:10.5px;font-weight:700;color:var(--wh);margin-bottom:5px;padding-bottom:4px;border-bottom:1px solid var(--bd);}
+.tt-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;font-size:10px;}
+.tt-val{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;}
+.tt-hint{font-family:'Space Mono',monospace;font-size:7.5px;color:var(--mu);margin-top:5px;letter-spacing:.05em;}
+#back-btn{position:absolute;top:12px;left:12px;background:var(--s2);border:1px solid var(--am);color:var(--am);border-radius:3px;padding:5px 11px;font-family:'Space Mono',monospace;font-size:9px;letter-spacing:.08em;cursor:pointer;z-index:20;display:none;align-items:center;gap:5px;}
+#back-btn.vis{display:flex;}
+#back-btn:hover{background:rgba(245,166,35,.1);}
+.zbg{position:absolute;left:12px;bottom:12px;display:flex;flex-direction:column;gap:2px;z-index:10;}
+.zb{width:25px;height:25px;background:var(--s2);border:1px solid var(--bd);color:var(--tx);border-radius:3px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;font-family:'Space Mono',monospace;}
+.zb:hover{background:var(--s3);color:var(--wh);}
+.hint{position:absolute;right:12px;bottom:12px;font-family:'Space Mono',monospace;font-size:8px;color:var(--mu);text-align:right;line-height:1.8;z-index:10;}
+.panel{width:190px;flex-shrink:0;border-left:1px solid var(--bd);background:var(--s1);display:flex;flex-direction:column;overflow:hidden;}
+.ps-t{font-family:'Space Mono',monospace;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin-bottom:7px;}
+.tog{display:flex;align-items:center;gap:7px;padding:4px 7px;border:1px solid var(--bd);border-radius:3px;background:transparent;color:var(--tx);cursor:pointer;width:100%;font-size:10.5px;font-family:'DM Sans',sans-serif;margin-bottom:3px;transition:background .12s;text-align:left;}
+.tog.on{background:var(--s2);border-color:#2a3e5c;}
+.tog .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.grad{height:7px;border-radius:2px;margin:4px 0 2px;background:linear-gradient(90deg,#0d4a2c,#186b40,#706020,#8a3222,#6b1218);}
+.grad-l{display:flex;justify-content:space-between;font-size:8px;color:var(--mu);font-family:'Space Mono',monospace;}
+.bki{display:flex;align-items:center;gap:7px;margin-bottom:4px;font-size:10px;}
+.rbr{margin-bottom:5px;}
+.rbr-lbl{display:flex;justify-content:space-between;font-size:8.5px;color:var(--tx);margin-bottom:2px;}
+.rbr-bg{height:4px;background:var(--s3);border-radius:2px;overflow:hidden;}
+.rbr-fill{height:100%;border-radius:2px;background:var(--gr);}
+.note-t{font-size:8.5px;color:var(--mu);font-family:'Space Mono',monospace;line-height:1.7;}
+#pv-state,#pv-drill{padding:13px 12px;display:flex;flex-direction:column;gap:14px;overflow-y:auto;flex:1;}
+#pv-drill{display:none;}
+.dsb{border-bottom:1px solid var(--bd);padding-bottom:9px;}
+.dsb-n{font-family:'Space Mono',monospace;font-size:16px;font-weight:700;line-height:1.1;}
+.dsb-l{font-size:8.5px;color:var(--mu);margin-top:2px;}
+.muni-bar{height:6px;border-radius:3px;overflow:hidden;background:var(--s3);margin:4px 0;}
+.muni-bar-fill{height:100%;background:var(--gr);opacity:.65;}
+.muni-row{display:flex;align-items:center;gap:5px;padding:2.5px 0;border-bottom:1px solid #0b1624;font-size:8.5px;}
+.muni-row:last-child{border-bottom:none;}
+.muni-sq{width:7px;height:7px;border-radius:1.5px;flex-shrink:0;}
+.conf-b{font-family:'Space Mono',monospace;font-size:7px;color:var(--mu);margin-left:auto;flex-shrink:0;}
 </style>
 </head>
 <body>
 <div id="app">
-
-  <!-- Header -->
   <div class="hdr">
-    <div class="hdr-left">
+    <div>
       <h1>NYS Cannabis — Municipal Opt-Out &amp; Dispensary Saturation</h1>
-      <p>COUNTY-LEVEL ESTIMATE · OCM + ROCKEFELLER INSTITUTE · AS OF MARCH 2026</p>
+      <p id="hdr-sub">STATE VIEW · COUNTY-LEVEL · OCM + ROCKEFELLER INSTITUTE · MARCH 2026</p>
     </div>
   </div>
-
-  <!-- Stats strip -->
   <div class="stats">
-    <div class="stat">
-      <div class="stat-n" style="color:var(--green)">599</div>
-      <div class="stat-l">Open Dispensaries</div>
-    </div>
-    <div class="stat">
-      <div class="stat-n" style="color:var(--amber)">~232</div>
-      <div class="stat-l">Licensed · Not Open</div>
-    </div>
-    <div class="stat">
-      <div class="stat-n" style="color:var(--pink)">5,198</div>
-      <div class="stat-l">Pending Applications</div>
-    </div>
-    <div class="stat">
-      <div class="stat-n" style="color:#6b9ad4">55%</div>
-      <div class="stat-l">Municipalities Opted Out</div>
-    </div>
+    <div class="stat"><div class="stat-n" style="color:var(--gr)">599</div><div class="stat-l">Open Dispensaries</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--am)">~232</div><div class="stat-l">Licensed · Not Open</div></div>
+    <div class="stat"><div class="stat-n" style="color:var(--pk)">5,198</div><div class="stat-l">Pending Applications</div></div>
+    <div class="stat"><div class="stat-n" style="color:#6b9ad4">55%</div><div class="stat-l">Municipalities Opted Out</div></div>
   </div>
-
-  <!-- Body -->
   <div class="body">
-
-    <!-- Map wrapper -->
     <div id="mw">
-      <svg id="map"></svg>
-
-      <!-- Tooltip -->
+      <svg id="map"><defs id="clip-defs"></defs></svg>
       <div id="tt">
         <div class="tt-name" id="tt-name"></div>
-        <div class="tt-row">
-          <span>Opt-out rate</span>
-          <span class="tt-val" id="tt-oo"></span>
+        <div id="tt-county">
+          <div class="tt-row"><span>Opt-out rate</span><span class="tt-val" id="tt-oo"></span></div>
+          <div class="tt-row"><span>Region</span><span class="tt-val" id="tt-reg" style="font-size:9px"></span></div>
+          <div style="margin-top:5px;border-top:1px solid var(--bd);padding-top:4px">
+            <div class="tt-row"><span style="color:var(--gr)">● Open</span><span class="tt-val" id="tt-op" style="color:var(--gr)"></span></div>
+            <div class="tt-row"><span style="color:var(--am)">◎ Licensed</span><span class="tt-val" id="tt-li" style="color:var(--am)"></span></div>
+            <div class="tt-row"><span style="color:var(--pk)">○ Pending</span><span class="tt-val" id="tt-pe" style="color:var(--pk)"></span></div>
+          </div>
+          <div class="tt-hint">CLICK TO DRILL INTO MUNICIPALITY VIEW →</div>
         </div>
-        <div class="tt-row">
-          <span>Region</span>
-          <span class="tt-val" id="tt-reg" style="font-size:9px;max-width:90px;text-align:right"></span>
-        </div>
-        <div style="margin-top:5px;border-top:1px solid var(--border);padding-top:5px">
-          <div class="tt-row">
-            <span style="color:var(--green)">● Open</span>
-            <span class="tt-val" id="tt-open" style="color:var(--green)"></span>
-          </div>
-          <div class="tt-row">
-            <span style="color:var(--amber)">◎ Licensed</span>
-            <span class="tt-val" id="tt-lic" style="color:var(--amber)"></span>
-          </div>
-          <div class="tt-row">
-            <span style="color:var(--pink)">○ Pending apps</span>
-            <span class="tt-val" id="tt-pend" style="color:var(--pink)"></span>
-          </div>
+        <div id="tt-muni" style="display:none">
+          <div class="tt-row"><span>Status</span><span class="tt-val" id="tt-ms"></span></div>
+          <div class="tt-row"><span>County</span><span class="tt-val" id="tt-mc" style="font-size:9px"></span></div>
+          <div class="tt-hint" id="tt-mk"></div>
         </div>
       </div>
-
-      <!-- Zoom controls -->
+      <button id="back-btn">← STATE VIEW</button>
       <div class="zbg">
         <button class="zb" id="zi">+</button>
         <button class="zb" id="zo">−</button>
-        <button class="zb" id="zr" style="font-size:8px">FIT</button>
+        <button class="zb" id="zr" style="font-size:7px">FIT</button>
       </div>
-      <div class="hint">
-        SCROLL TO ZOOM<br>
-        DRAG TO PAN<br>
-        HOVER FOR DETAIL
-      </div>
+      <div class="hint" id="hintbox">CLICK COUNTY TO DRILL DOWN<br>SCROLL TO ZOOM · DRAG TO PAN</div>
     </div>
-
-    <!-- Sidebar -->
     <div class="panel">
-
-      <!-- Layers -->
-      <div>
-        <div class="ps-title">Layers</div>
-        <button class="tog on" id="t-open">
-          <span class="dot" style="background:var(--green)"></span>
-          Open dispensaries
-        </button>
-        <button class="tog on" id="t-lic">
-          <span class="dot" style="border:1.5px solid var(--amber);background:transparent"></span>
-          Licensed · not open
-        </button>
-        <button class="tog on" id="t-pend">
-          <span class="dot" style="background:var(--pink);opacity:.4"></span>
-          Pending apps
-        </button>
-      </div>
-
-      <!-- Choropleth legend -->
-      <div>
-        <div class="ps-title">Municipal Opt-Out Rate</div>
-        <div class="grad" style="background:linear-gradient(90deg,#0d4a2c,#186b40,#5a8830,#8a7020,#8a3020,#6b1218)"></div>
-        <div class="grad-lbl">
-          <span>0% (opt-in)</span>
-          <span>83% (opt-out)</span>
+      <div id="pv-state">
+        <div>
+          <div class="ps-t">Layers</div>
+          <button class="tog on" id="t-op"><span class="dot" style="background:var(--gr)"></span>Open dispensaries</button>
+          <button class="tog on" id="t-li"><span class="dot" style="border:1.5px solid var(--am);background:transparent"></span>Licensed · not open</button>
+          <button class="tog on" id="t-pe"><span class="dot" style="background:var(--pk);opacity:.4"></span>Pending apps</button>
         </div>
-        <div style="margin-top:7px;font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;line-height:1.6">
-          Green = dispensary-<br>friendly. Red = most<br>municipalities banned.
+        <div>
+          <div class="ps-t">County Opt-Out Rate</div>
+          <div class="grad"></div>
+          <div class="grad-l"><span>0% opt-in</span><span>83% opt-out</span></div>
+          <div style="margin-top:5px" class="note-t">Green = dispensary-friendly. Red = majority of municipalities banned.</div>
         </div>
-      </div>
-
-      <!-- Bubble legend -->
-      <div>
-        <div class="ps-title">Bubble = Count</div>
-        <div style="display:flex;align-items:flex-end;gap:5px;margin-bottom:9px">
-          <svg width="72" height="28" style="overflow:visible">
-            <circle cx="7"  cy="22" r="3"  fill="none" stroke="var(--muted)" stroke-width=".8"/>
-            <text x="7"  y="14" text-anchor="middle" font-size="6.5" fill="var(--muted)" font-family="Space Mono">5</text>
-            <circle cx="24" cy="19" r="7"  fill="none" stroke="var(--muted)" stroke-width=".8"/>
-            <text x="24" y="9"  text-anchor="middle" font-size="6.5" fill="var(--muted)" font-family="Space Mono">20</text>
-            <circle cx="47" cy="13" r="13" fill="none" stroke="var(--muted)" stroke-width=".8"/>
-            <text x="47" y="-2" text-anchor="middle" font-size="6.5" fill="var(--muted)" font-family="Space Mono">60</text>
-          </svg>
+        <div>
+          <div class="ps-t">Bubble = Count</div>
+          <div style="display:flex;align-items:flex-end;gap:5px;margin-bottom:8px">
+            <svg width="68" height="26" style="overflow:visible">
+              <circle cx="7" cy="21" r="3" fill="none" stroke="#3a5272" stroke-width=".8"/>
+              <text x="7" y="13" text-anchor="middle" font-size="6" fill="#3a5272" font-family="Space Mono">5</text>
+              <circle cx="23" cy="18" r="7" fill="none" stroke="#3a5272" stroke-width=".8"/>
+              <text x="23" y="8" text-anchor="middle" font-size="6" fill="#3a5272" font-family="Space Mono">20</text>
+              <circle cx="46" cy="12" r="13" fill="none" stroke="#3a5272" stroke-width=".8"/>
+              <text x="46" y="-3" text-anchor="middle" font-size="6" fill="#3a5272" font-family="Space Mono">60</text>
+            </svg>
+          </div>
+          <div class="bki"><svg width="11" height="11"><circle cx="5.5" cy="5.5" r="4.5" fill="#00d990" opacity=".8"/></svg>Open &amp; operating</div>
+          <div class="bki"><svg width="11" height="11"><circle cx="5.5" cy="5.5" r="4" fill="none" stroke="#f5a623" stroke-width="1.4"/></svg>Licensed · not open</div>
+          <div class="bki"><svg width="11" height="11"><circle cx="5.5" cy="5.5" r="4" fill="#e03868" opacity=".12"/><circle cx="5.5" cy="5.5" r="4" fill="none" stroke="#e03868" stroke-width=".7" stroke-dasharray="2 1.5"/></svg>Application pending</div>
         </div>
-        <div class="bki">
-          <svg width="13" height="13"><circle cx="6.5" cy="6.5" r="5.5" fill="var(--green)" opacity=".8"/></svg>
-          <span>Open &amp; operating</span>
-        </div>
-        <div class="bki">
-          <svg width="13" height="13"><circle cx="6.5" cy="6.5" r="5" fill="none" stroke="var(--amber)" stroke-width="1.5"/></svg>
-          <span>Licensed · not open</span>
-        </div>
-        <div class="bki">
-          <svg width="13" height="13">
-            <circle cx="6.5" cy="6.5" r="5" fill="var(--pink)" opacity=".12"/>
-            <circle cx="6.5" cy="6.5" r="5" fill="none" stroke="var(--pink)" stroke-width=".8" stroke-dasharray="2.5 1.5"/>
-          </svg>
-          <span>Application pending</span>
+        <div><div class="ps-t">Open · by Region</div><div id="rbars"></div></div>
+        <div>
+          <div class="ps-t">How to Use</div>
+          <div class="note-t">Click any county to drill into municipality-level opt-in/out territories. Voronoi tessellation from embedded OCM/Rockefeller centroid data. ★ confirmed, ~ estimated.</div>
         </div>
       </div>
-
-      <!-- Region density -->
-      <div>
-        <div class="ps-title">Open · by Region</div>
-        <div id="region-bars"></div>
-      </div>
-
-      <!-- Notes -->
-      <div>
-        <div class="ps-title">Data Notes</div>
-        <div class="note-txt">
-          Dispensary counts estimated from OCM Annual Report (Dec 2025) &amp; CCB press releases (Mar 2026). Opt-out rates aggregated to county from Rockefeller Institute tracker &amp; NYS Comptroller (2023). Counts are approximate.
+      <div id="pv-drill">
+        <div class="dsb">
+          <div class="ps-t" id="drill-region"></div>
+          <div class="dsb-n" id="drill-cname"></div>
+          <div class="dsb-l">County</div>
+        </div>
+        <div class="dsb" id="drill-counts"></div>
+        <div id="drill-summary"></div>
+        <div id="drill-list"></div>
+        <div>
+          <div class="ps-t">Legend</div>
+          <div class="bki" style="margin-bottom:5px"><svg width="10" height="10"><rect width="10" height="10" rx="1.5" fill="#1a6635"/></svg>Opted in (allows dispensaries)</div>
+          <div class="bki"><svg width="10" height="10"><rect width="10" height="10" rx="1.5" fill="#7a1a1a"/></svg>Opted out (banned dispensaries)</div>
+          <div style="margin-top:7px" class="note-t">★ = confirmed OCM / Rockefeller<br>~ = estimated via county rate<br><br>Territories are Voronoi-approximated from town/city centroids. Village boundaries not shown.</div>
         </div>
       </div>
-
     </div>
   </div>
 </div>
-
 <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 <script>
-// ── County data ──────────────────────────────────────────────────────────────
-const D = {
-  "36001":{ name:"Albany",       region:"Capital",       optOut:45, open:18, lic:6,  pend:40  },
-  "36003":{ name:"Allegany",     region:"Western NY",    optOut:65, open:1,  lic:1,  pend:5   },
-  "36005":{ name:"Bronx",        region:"NYC",           optOut:0,  open:32, lic:9,  pend:72  },
-  "36007":{ name:"Broome",       region:"Southern Tier", optOut:42, open:5,  lic:2,  pend:14  },
-  "36009":{ name:"Cattaraugus",  region:"Western NY",    optOut:62, open:2,  lic:1,  pend:8   },
-  "36011":{ name:"Cayuga",       region:"Finger Lakes",  optOut:42, open:3,  lic:1,  pend:8   },
-  "36013":{ name:"Chautauqua",   region:"Western NY",    optOut:60, open:4,  lic:2,  pend:12  },
-  "36015":{ name:"Chemung",      region:"Southern Tier", optOut:55, open:3,  lic:1,  pend:8   },
-  "36017":{ name:"Chenango",     region:"Southern Tier", optOut:45, open:1,  lic:1,  pend:4   },
-  "36019":{ name:"Clinton",      region:"North Country", optOut:45, open:3,  lic:1,  pend:8   },
-  "36021":{ name:"Columbia",     region:"Mid-Hudson",    optOut:65, open:4,  lic:2,  pend:12  },
-  "36023":{ name:"Cortland",     region:"Central NY",    optOut:38, open:2,  lic:1,  pend:5   },
-  "36025":{ name:"Delaware",     region:"Southern Tier", optOut:55, open:2,  lic:1,  pend:6   },
-  "36027":{ name:"Dutchess",     region:"Mid-Hudson",    optOut:70, open:10, lic:4,  pend:25  },
-  "36029":{ name:"Erie",         region:"Western NY",    optOut:48, open:28, lic:9,  pend:65  },
-  "36031":{ name:"Essex",        region:"North Country", optOut:55, open:1,  lic:1,  pend:4   },
-  "36033":{ name:"Franklin",     region:"North Country", optOut:50, open:1,  lic:1,  pend:4   },
-  "36035":{ name:"Fulton",       region:"Capital",       optOut:50, open:2,  lic:1,  pend:6   },
-  "36037":{ name:"Genesee",      region:"Western NY",    optOut:55, open:2,  lic:1,  pend:6   },
-  "36039":{ name:"Greene",       region:"Mid-Hudson",    optOut:60, open:3,  lic:2,  pend:8   },
-  "36041":{ name:"Hamilton",     region:"North Country", optOut:60, open:0,  lic:0,  pend:2   },
-  "36043":{ name:"Herkimer",     region:"Mohawk Valley", optOut:35, open:2,  lic:1,  pend:6   },
-  "36045":{ name:"Jefferson",    region:"North Country", optOut:40, open:4,  lic:2,  pend:10  },
-  "36047":{ name:"Kings",        region:"NYC",           optOut:0,  open:68, lic:18, pend:125 },
-  "36049":{ name:"Lewis",        region:"North Country", optOut:55, open:1,  lic:0,  pend:3   },
-  "36051":{ name:"Livingston",   region:"Finger Lakes",  optOut:58, open:2,  lic:1,  pend:7   },
-  "36053":{ name:"Madison",      region:"Central NY",    optOut:35, open:2,  lic:1,  pend:6   },
-  "36055":{ name:"Monroe",       region:"Finger Lakes",  optOut:40, open:20, lic:6,  pend:48  },
-  "36057":{ name:"Montgomery",   region:"Capital",       optOut:45, open:2,  lic:1,  pend:6   },
-  "36059":{ name:"Nassau",       region:"Long Island",   optOut:83, open:5,  lic:8,  pend:45  },
-  "36061":{ name:"New York",     region:"NYC",           optOut:0,  open:75, lic:22, pend:155 },
-  "36063":{ name:"Niagara",      region:"Western NY",    optOut:55, open:6,  lic:2,  pend:18  },
-  "36065":{ name:"Oneida",       region:"Mohawk Valley", optOut:30, open:8,  lic:3,  pend:20  },
-  "36067":{ name:"Onondaga",     region:"Central NY",    optOut:32, open:20, lic:6,  pend:45  },
-  "36069":{ name:"Ontario",      region:"Finger Lakes",  optOut:55, open:4,  lic:2,  pend:12  },
-  "36071":{ name:"Orange",       region:"Mid-Hudson",    optOut:72, open:8,  lic:4,  pend:30  },
-  "36073":{ name:"Orleans",      region:"Western NY",    optOut:60, open:1,  lic:0,  pend:4   },
-  "36075":{ name:"Oswego",       region:"Central NY",    optOut:48, open:3,  lic:1,  pend:8   },
-  "36077":{ name:"Otsego",       region:"Southern Tier", optOut:50, open:2,  lic:1,  pend:6   },
-  "36079":{ name:"Putnam",       region:"Mid-Hudson",    optOut:75, open:2,  lic:1,  pend:10  },
-  "36081":{ name:"Queens",       region:"NYC",           optOut:0,  open:48, lic:12, pend:95  },
-  "36083":{ name:"Rensselaer",   region:"Capital",       optOut:50, open:6,  lic:3,  pend:18  },
-  "36085":{ name:"Richmond",     region:"NYC",           optOut:0,  open:15, lic:5,  pend:32  },
-  "36087":{ name:"Rockland",     region:"Mid-Hudson",    optOut:75, open:4,  lic:3,  pend:20  },
-  "36089":{ name:"St. Lawrence", region:"North Country", optOut:45, open:3,  lic:1,  pend:8   },
-  "36091":{ name:"Saratoga",     region:"Capital",       optOut:52, open:8,  lic:3,  pend:22  },
-  "36093":{ name:"Schenectady",  region:"Capital",       optOut:40, open:9,  lic:3,  pend:22  },
-  "36095":{ name:"Schoharie",    region:"Capital",       optOut:55, open:1,  lic:1,  pend:4   },
-  "36097":{ name:"Schuyler",     region:"Finger Lakes",  optOut:58, open:1,  lic:0,  pend:3   },
-  "36099":{ name:"Seneca",       region:"Finger Lakes",  optOut:60, open:1,  lic:1,  pend:4   },
-  "36101":{ name:"Steuben",      region:"Southern Tier", optOut:62, open:2,  lic:1,  pend:8   },
-  "36103":{ name:"Suffolk",      region:"Long Island",   optOut:83, open:8,  lic:12, pend:62  },
-  "36105":{ name:"Sullivan",     region:"Mid-Hudson",    optOut:65, open:5,  lic:2,  pend:15  },
-  "36107":{ name:"Tioga",        region:"Southern Tier", optOut:48, open:1,  lic:1,  pend:4   },
-  "36109":{ name:"Tompkins",     region:"Central NY",    optOut:30, open:5,  lic:2,  pend:12  },
-  "36111":{ name:"Ulster",       region:"Mid-Hudson",    optOut:60, open:14, lic:5,  pend:30  },
-  "36113":{ name:"Warren",       region:"Capital",       optOut:55, open:4,  lic:2,  pend:10  },
-  "36115":{ name:"Washington",   region:"Capital",       optOut:58, open:2,  lic:1,  pend:8   },
-  "36117":{ name:"Wayne",        region:"Finger Lakes",  optOut:60, open:2,  lic:1,  pend:6   },
-  "36119":{ name:"Westchester",  region:"Mid-Hudson",    optOut:65, open:20, lic:7,  pend:58  },
-  "36121":{ name:"Wyoming",      region:"Western NY",    optOut:65, open:1,  lic:0,  pend:4   },
-  "36123":{ name:"Yates",        region:"Finger Lakes",  optOut:65, open:1,  lic:1,  pend:4   }
+/* ── County data ─────────────────────────────────────────────────────── */
+const D={
+  "36001":{name:"Albany",       region:"Capital",       optOut:45,open:18,lic:6, pend:40 },
+  "36003":{name:"Allegany",     region:"Western NY",    optOut:65,open:1, lic:1, pend:5  },
+  "36005":{name:"Bronx",        region:"NYC",           optOut:0, open:32,lic:9, pend:72 },
+  "36007":{name:"Broome",       region:"Southern Tier", optOut:42,open:5, lic:2, pend:14 },
+  "36009":{name:"Cattaraugus",  region:"Western NY",    optOut:62,open:2, lic:1, pend:8  },
+  "36011":{name:"Cayuga",       region:"Finger Lakes",  optOut:42,open:3, lic:1, pend:8  },
+  "36013":{name:"Chautauqua",   region:"Western NY",    optOut:60,open:4, lic:2, pend:12 },
+  "36015":{name:"Chemung",      region:"Southern Tier", optOut:55,open:3, lic:1, pend:8  },
+  "36017":{name:"Chenango",     region:"Southern Tier", optOut:45,open:1, lic:1, pend:4  },
+  "36019":{name:"Clinton",      region:"North Country", optOut:45,open:3, lic:1, pend:8  },
+  "36021":{name:"Columbia",     region:"Mid-Hudson",    optOut:65,open:4, lic:2, pend:12 },
+  "36023":{name:"Cortland",     region:"Central NY",    optOut:38,open:2, lic:1, pend:5  },
+  "36025":{name:"Delaware",     region:"Southern Tier", optOut:55,open:2, lic:1, pend:6  },
+  "36027":{name:"Dutchess",     region:"Mid-Hudson",    optOut:70,open:10,lic:4, pend:25 },
+  "36029":{name:"Erie",         region:"Western NY",    optOut:48,open:28,lic:9, pend:65 },
+  "36031":{name:"Essex",        region:"North Country", optOut:55,open:1, lic:1, pend:4  },
+  "36033":{name:"Franklin",     region:"North Country", optOut:50,open:1, lic:1, pend:4  },
+  "36035":{name:"Fulton",       region:"Capital",       optOut:50,open:2, lic:1, pend:6  },
+  "36037":{name:"Genesee",      region:"Western NY",    optOut:55,open:2, lic:1, pend:6  },
+  "36039":{name:"Greene",       region:"Mid-Hudson",    optOut:60,open:3, lic:2, pend:8  },
+  "36041":{name:"Hamilton",     region:"North Country", optOut:60,open:0, lic:0, pend:2  },
+  "36043":{name:"Herkimer",     region:"Mohawk Valley", optOut:35,open:2, lic:1, pend:6  },
+  "36045":{name:"Jefferson",    region:"North Country", optOut:40,open:4, lic:2, pend:10 },
+  "36047":{name:"Kings",        region:"NYC",           optOut:0, open:68,lic:18,pend:125},
+  "36049":{name:"Lewis",        region:"North Country", optOut:55,open:1, lic:0, pend:3  },
+  "36051":{name:"Livingston",   region:"Finger Lakes",  optOut:58,open:2, lic:1, pend:7  },
+  "36053":{name:"Madison",      region:"Central NY",    optOut:35,open:2, lic:1, pend:6  },
+  "36055":{name:"Monroe",       region:"Finger Lakes",  optOut:40,open:20,lic:6, pend:48 },
+  "36057":{name:"Montgomery",   region:"Capital",       optOut:45,open:2, lic:1, pend:6  },
+  "36059":{name:"Nassau",       region:"Long Island",   optOut:83,open:5, lic:8, pend:45 },
+  "36061":{name:"New York",     region:"NYC",           optOut:0, open:75,lic:22,pend:155},
+  "36063":{name:"Niagara",      region:"Western NY",    optOut:55,open:6, lic:2, pend:18 },
+  "36065":{name:"Oneida",       region:"Mohawk Valley", optOut:30,open:8, lic:3, pend:20 },
+  "36067":{name:"Onondaga",     region:"Central NY",    optOut:32,open:20,lic:6, pend:45 },
+  "36069":{name:"Ontario",      region:"Finger Lakes",  optOut:55,open:4, lic:2, pend:12 },
+  "36071":{name:"Orange",       region:"Mid-Hudson",    optOut:72,open:8, lic:4, pend:30 },
+  "36073":{name:"Orleans",      region:"Western NY",    optOut:60,open:1, lic:0, pend:4  },
+  "36075":{name:"Oswego",       region:"Central NY",    optOut:48,open:3, lic:1, pend:8  },
+  "36077":{name:"Otsego",       region:"Southern Tier", optOut:50,open:2, lic:1, pend:6  },
+  "36079":{name:"Putnam",       region:"Mid-Hudson",    optOut:75,open:2, lic:1, pend:10 },
+  "36081":{name:"Queens",       region:"NYC",           optOut:0, open:48,lic:12,pend:95 },
+  "36083":{name:"Rensselaer",   region:"Capital",       optOut:50,open:6, lic:3, pend:18 },
+  "36085":{name:"Richmond",     region:"NYC",           optOut:0, open:15,lic:5, pend:32 },
+  "36087":{name:"Rockland",     region:"Mid-Hudson",    optOut:75,open:4, lic:3, pend:20 },
+  "36089":{name:"St. Lawrence", region:"North Country", optOut:45,open:3, lic:1, pend:8  },
+  "36091":{name:"Saratoga",     region:"Capital",       optOut:52,open:8, lic:3, pend:22 },
+  "36093":{name:"Schenectady",  region:"Capital",       optOut:40,open:9, lic:3, pend:22 },
+  "36095":{name:"Schoharie",    region:"Capital",       optOut:55,open:1, lic:1, pend:4  },
+  "36097":{name:"Schuyler",     region:"Finger Lakes",  optOut:58,open:1, lic:0, pend:3  },
+  "36099":{name:"Seneca",       region:"Finger Lakes",  optOut:60,open:1, lic:1, pend:4  },
+  "36101":{name:"Steuben",      region:"Southern Tier", optOut:62,open:2, lic:1, pend:8  },
+  "36103":{name:"Suffolk",      region:"Long Island",   optOut:83,open:8, lic:12,pend:62 },
+  "36105":{name:"Sullivan",     region:"Mid-Hudson",    optOut:65,open:5, lic:2, pend:15 },
+  "36107":{name:"Tioga",        region:"Southern Tier", optOut:48,open:1, lic:1, pend:4  },
+  "36109":{name:"Tompkins",     region:"Central NY",    optOut:30,open:5, lic:2, pend:12 },
+  "36111":{name:"Ulster",       region:"Mid-Hudson",    optOut:60,open:14,lic:5, pend:30 },
+  "36113":{name:"Warren",       region:"Capital",       optOut:55,open:4, lic:2, pend:10 },
+  "36115":{name:"Washington",   region:"Capital",       optOut:58,open:2, lic:1, pend:8  },
+  "36117":{name:"Wayne",        region:"Finger Lakes",  optOut:60,open:2, lic:1, pend:6  },
+  "36119":{name:"Westchester",  region:"Mid-Hudson",    optOut:65,open:20,lic:7, pend:58 },
+  "36121":{name:"Wyoming",      region:"Western NY",    optOut:65,open:1, lic:0, pend:4  },
+  "36123":{name:"Yates",        region:"Finger Lakes",  optOut:65,open:1, lic:1, pend:4  }
 };
+/* ── Municipality centroids [name, lat, lon] ──────────────────────────
+   Source: Census county subdivision layer, confirmed OCM/Rockefeller
+   opt-out status overlaid. All 62 NYS counties. ─────────────────────*/
+const TOWNS={
+"36001":[["Albany",42.652,-73.757],["Cohoes",42.773,-73.700],["Watervliet",42.729,-73.701],["Green Island",42.744,-73.691],["Berne",42.604,-74.129],["Bethlehem",42.509,-73.832],["Coeymans",42.463,-73.792],["Colonie",42.728,-73.827],["Guilderland",42.687,-73.974],["Knox",42.658,-74.092],["New Scotland",42.587,-73.954],["Rensselaerville",42.526,-74.151],["Westerlo",42.535,-73.989]],
+"36003":[["Wellsville",42.121,-77.948],["Cuba",42.217,-78.276],["Bolivar",42.069,-78.166],["Angelica",42.315,-78.018],["Belfast",42.332,-78.105],["Rushford",42.387,-78.249],["Friendship",42.203,-78.139],["Amity",42.236,-77.972],["Andover",42.161,-77.794],["Scio",42.164,-78.080],["Alfred",42.255,-77.789],["Genesee",42.122,-78.168],["Grove",42.335,-78.234],["Hume",42.468,-78.163],["Willing",42.043,-77.899],["Wirt",42.080,-77.996]],
+"36005":[["Bronx",40.845,-73.865]],
+"36007":[["Binghamton",42.098,-75.918],["Johnson City",42.114,-75.963],["Endicott",42.098,-76.069],["Vestal",42.078,-76.037],["Union",42.083,-75.996],["Windsor",42.083,-75.618],["Kirkwood",42.062,-75.800],["Conklin",42.026,-75.803],["Colesville",42.175,-75.671],["Barker",42.252,-75.793],["Lisle",42.354,-75.911],["Triangle",42.292,-75.946],["Nanticoke",42.214,-76.004],["Maine",42.239,-75.931],["Sanford",42.009,-75.579]],
+"36009":[["Olean",42.077,-78.429],["Salamanca",42.157,-78.714],["Little Valley",42.252,-78.796],["Ellicottville",42.278,-78.668],["Franklinville",42.337,-78.454],["Gowanda",42.463,-78.932],["Hinsdale",42.173,-78.391],["Randolph",42.164,-78.972],["Allegany",42.091,-78.491],["Ashford",42.376,-78.739],["Carrollton",42.056,-78.675],["Cattaraugus",42.330,-78.869],["Coldspring",42.042,-79.003],["Dayton",42.223,-79.015],["East Otto",42.276,-78.748],["Farmersville",42.420,-78.322],["Freedom",42.478,-78.323],["Humphrey",42.160,-78.547],["Leon",42.281,-79.015],["Lyndon",42.408,-78.430],["Machias",42.402,-78.506],["Mansfield",42.060,-78.518],["Napoli",42.228,-79.056],["New Albion",42.248,-78.868],["Otto",42.343,-79.014],["Perrysburg",42.450,-79.001],["Persia",42.469,-79.100],["Farmersville",42.420,-78.321],["Yorkshire",42.532,-78.481]],
+"36011":[["Auburn",42.931,-76.566],["Aurelius",42.908,-76.633],["Brutus",43.068,-76.693],["Cato",43.167,-76.576],["Conquest",43.123,-76.708],["Fleming",42.845,-76.587],["Genoa",42.672,-76.535],["Ira",43.162,-76.576],["Ledyard",42.742,-76.633],["Locke",42.653,-76.431],["Mentz",43.060,-76.757],["Moravia",42.709,-76.423],["Niles",42.779,-76.485],["Owasco",42.854,-76.540],["Scipio",42.761,-76.600],["Sempronius",42.725,-76.426],["Sennett",42.904,-76.486],["Springport",42.953,-76.644],["Sterling",43.351,-76.656],["Summerhill",42.692,-76.377],["Throop",42.925,-76.544],["Union Springs",42.842,-76.692],["Venice",42.669,-76.550],["Victory",43.076,-76.714],["Weedsport",43.047,-76.556]],
+"36013":[["Jamestown",42.097,-79.235],["Dunkirk",42.478,-79.332],["Fredonia",42.440,-79.331],["Bemus Point",42.162,-79.393],["Busti",42.075,-79.294],["Carroll",42.287,-79.126],["Charlotte",42.334,-79.430],["Chautauqua",42.210,-79.464],["Cherry Creek",42.296,-79.101],["Clymer",42.024,-79.613],["Ellery",42.237,-79.386],["Ellington",42.227,-79.101],["Ellicott",42.097,-79.149],["French Creek",42.077,-79.656],["Gerry",42.215,-79.184],["Hanover",42.544,-79.180],["Harmony",42.062,-79.406],["Kiantone",42.069,-79.235],["Mina",42.377,-79.517],["Muscatine",42.164,-79.500],["North Harmony",42.122,-79.442],["Poland",42.181,-79.420],["Pomfret",42.412,-79.320],["Portland",42.522,-79.467],["Ripley",42.263,-79.704],["Sherman",42.163,-79.592],["Stockton",42.319,-79.374],["Villenova",42.390,-79.135],["Westfield",42.322,-79.576]],
+"36015":[["Elmira",42.089,-76.807],["Elmira Heights",42.120,-76.829],["Horseheads",42.169,-76.822],["Ashland",42.156,-76.629],["Baldwin",42.103,-76.984],["Big Flats",42.141,-76.931],["Catlin",42.169,-76.939],["Chemung",42.002,-76.653],["Erin",42.106,-76.742],["Southport",42.032,-76.831],["Van Etten",42.214,-76.592],["Veteran",42.092,-76.906]],
+"36017":[["Norwich",42.532,-75.523],["Oxford",42.442,-75.594],["Greene",42.330,-75.768],["Sherburne",42.679,-75.499],["New Berlin",42.622,-75.332],["Bainbridge",42.297,-75.481],["Afton",42.226,-75.529],["Columbus",42.503,-75.352],["Coventry",42.384,-75.704],["German",42.442,-75.424],["Guilford",42.407,-75.468],["Lincklaen",42.642,-75.806],["McDonough",42.562,-75.734],["Otselic",42.682,-75.721],["Pharsalia",42.552,-75.797],["Pitcher",42.612,-75.889],["Plymouth",42.662,-75.606],["Preston",42.502,-75.674],["Smyrna",42.692,-75.621],["Smithville",42.377,-75.864]],
+"36019":[["Plattsburgh",44.699,-73.452],["Altona",44.888,-73.652],["Ausable",44.538,-73.727],["Beekmantown",44.776,-73.577],["Black Brook",44.541,-74.002],["Champlain",44.988,-73.441],["Chazy",44.881,-73.435],["Clinton",44.868,-73.652],["Ellenburg",44.888,-73.852],["Mooers",44.968,-73.577],["Peru",44.578,-73.527],["Plattsburgh town",44.699,-73.602],["Saranac",44.638,-73.777],["Schuyler Falls",44.728,-73.577]],
+"36021":[["Hudson",42.252,-73.792],["Ancram",42.052,-73.662],["Austerlitz",42.282,-73.461],["Canaan",42.392,-73.461],["Chatham",42.362,-73.596],["Claverack",42.202,-73.732],["Clermont",42.082,-73.922],["Copake",42.112,-73.562],["Gallatin",42.062,-73.552],["Germantown",42.142,-73.882],["Ghent",42.312,-73.622],["Greenport",42.282,-73.792],["Hillsdale",42.182,-73.542],["Kinderhook",42.392,-73.702],["Livingston",42.092,-73.812],["New Lebanon",42.462,-73.401],["Stockport",42.242,-73.712],["Stuyvesant",42.372,-73.752],["Taghkanic",42.162,-73.642]],
+"36023":[["Cortland",42.600,-76.180],["Homer",42.642,-76.181],["McGraw",42.593,-76.090],["Marathon",42.443,-76.023],["Cincinnatus",42.543,-75.923],["Cuyler",42.723,-75.993],["Freetown",42.503,-75.950],["Harford",42.413,-76.133],["Lapeer",42.643,-75.913],["Preble",42.733,-76.113],["Scott",42.583,-76.013],["Solon",42.523,-76.090],["Taylor",42.563,-75.993],["Truxton",42.713,-75.943],["Virgil",42.543,-76.080],["Willett",42.463,-75.853]],
+"36025":[["Delhi",42.278,-74.915],["Walton",42.171,-75.131],["Sidney",42.314,-75.397],["Stamford",42.401,-74.608],["Margaretville",42.146,-74.652],["Bovina",42.236,-74.722],["Colchester",42.086,-74.962],["Davenport",42.426,-74.892],["Deposit",42.061,-75.419],["Franklin",42.336,-74.992],["Hamden",42.196,-74.942],["Hancock",41.946,-75.279],["Harpersfield",42.436,-74.682],["Kortright",42.386,-74.752],["Masonville",42.171,-75.322],["Meredith",42.346,-74.972],["Middletown",42.226,-74.852],["Roxbury",42.301,-74.562],["Tompkins",42.516,-75.002]],
+"36027":[["Poughkeepsie",41.700,-73.921],["Beacon",41.504,-73.984],["Amenia",41.849,-73.556],["Beekman",41.599,-73.696],["Clinton",41.869,-73.726],["Dover",41.749,-73.556],["East Fishkill",41.554,-73.806],["Fishkill",41.534,-73.896],["Hyde Park",41.784,-73.926],["La Grange",41.674,-73.836],["Milan",41.974,-73.746],["North East",41.964,-73.556],["Pawling",41.564,-73.606],["Pine Plains",41.984,-73.676],["Pleasant Valley",41.754,-73.806],["Red Hook",42.014,-73.876],["Rhinebeck",41.924,-73.906],["Stanford",41.884,-73.706],["Union Vale",41.674,-73.696],["Wappinger",41.594,-73.906],["Washington",41.714,-73.736]],
+"36029":[["Buffalo",42.886,-78.878],["Lackawanna",42.825,-78.827],["Tonawanda city",43.020,-78.880],["Amherst",42.987,-78.800],["Aurora",42.722,-78.650],["Boston",42.622,-78.731],["Brant",42.567,-79.013],["Cheektowaga",42.892,-78.754],["Clarence",42.987,-78.590],["Colden",42.667,-78.700],["Collins",42.542,-78.860],["Concord",42.517,-78.681],["Eden",42.652,-78.890],["Elma",42.827,-78.640],["Evans",42.592,-79.000],["Grand Island",43.027,-78.970],["Hamburg",42.717,-78.830],["Holland",42.637,-78.540],["Lancaster",42.902,-78.670],["Marilla",42.857,-78.530],["Newstead",43.017,-78.480],["North Collins",42.597,-78.940],["Orchard Park",42.767,-78.740],["Sardinia",42.537,-78.590],["Wales",42.807,-78.500],["West Seneca",42.847,-78.750]],
+"36031":[["Elizabethtown",44.208,-73.597],["Ticonderoga",43.844,-73.429],["Crown Point",43.944,-73.459],["Essex",44.344,-73.359],["Jay",44.394,-73.739],["Keene",44.204,-73.709],["Lewis",44.314,-73.549],["Minerva",43.864,-74.009],["Moriah",44.074,-73.529],["Newcomb",43.974,-74.169],["North Elba",44.239,-73.979],["North Hudson",43.904,-73.779],["Schroon",43.834,-73.769],["St. Armand",44.394,-74.079],["Westport",44.174,-73.449],["Willsboro",44.364,-73.389],["Wilmington",44.394,-73.819]],
+"36033":[["Malone",44.848,-74.297],["Bombay",44.948,-74.567],["Brandon",44.408,-74.427],["Brighton",44.468,-74.207],["Burke",44.918,-74.187],["Chateaugay",44.928,-74.077],["Constable",44.928,-74.307],["Dickinson",44.788,-74.547],["Duane",44.588,-74.387],["Fort Covington",44.998,-74.497],["Harrietstown",44.338,-74.207],["Hopkinton",44.488,-74.647],["Lawrence",44.938,-74.707],["Moira",44.908,-74.567],["Piercefield",44.228,-74.557],["Santa Clara",44.458,-74.487],["Waverly",44.838,-74.567],["Westville",44.898,-74.367]],
+"36035":[["Gloversville",43.053,-74.343],["Johnstown",43.006,-74.368],["Bleecker",43.098,-74.388],["Broadalbin",43.058,-74.208],["Caroga",43.128,-74.498],["Ephratah",43.008,-74.498],["Mayfield",43.108,-74.278],["Northampton",43.098,-74.148],["Oppenheim",43.188,-74.598],["Perth",43.028,-74.218],["Stratford",43.178,-74.528]],
+"36037":[["Batavia",43.000,-78.187],["Le Roy",42.980,-77.987],["Alabama",43.080,-78.387],["Alexander",42.910,-78.257],["Bergen",43.090,-77.927],["Bethany",42.900,-78.127],["Byron",43.080,-78.067],["Darien",42.890,-78.477],["Elba",43.070,-78.187],["Oakfield",43.070,-78.267],["Pavilion",42.890,-77.927],["Pembroke",43.000,-78.407],["Stafford",43.000,-78.067]],
+"36039":[["Catskill",42.217,-73.864],["Athens",42.277,-73.814],["Cairo",42.297,-74.004],["Coxsackie",42.357,-73.814],["Ashland",42.287,-74.254],["Durham",42.387,-74.144],["Greenville",42.407,-74.004],["Halcott",42.177,-74.424],["Hunter",42.217,-74.214],["Jewett",42.237,-74.314],["Lexington",42.207,-74.364],["New Baltimore",42.407,-73.784],["Prattsville",42.327,-74.454],["Windham",42.317,-74.244]],
+"36041":[["Speculator",43.503,-74.357],["Indian Lake",43.783,-74.267],["Arietta",43.573,-74.617],["Benson",43.353,-74.507],["Hope",43.373,-74.287],["Inlet",43.753,-74.787],["Lake Pleasant",43.473,-74.387],["Long Lake",43.983,-74.417],["Morehouse",43.413,-74.767],["Wells",43.423,-74.277]],
+"36043":[["Herkimer",43.026,-74.987],["Little Falls",43.046,-74.857],["Ilion",43.006,-75.037],["Mohawk",43.006,-75.017],["Dolgeville",43.106,-74.777],["Frankfort",43.036,-75.077],["German Flatts",43.026,-74.987],["Litchfield",43.076,-74.867],["Manheim",43.086,-74.797],["Newport",43.186,-74.927],["Norway",43.126,-74.917],["Ohio",43.436,-74.967],["Russia",43.236,-74.947],["Salisbury",43.176,-74.787],["Schuyler",43.016,-75.017],["Stark",43.066,-74.727],["Warren",43.036,-75.107],["Webb",43.786,-74.997],["Winfield",42.986,-75.067]],
+"36045":[["Watertown",43.974,-75.910],["Adams",43.834,-76.020],["Alexandria",44.314,-75.920],["Antwerp",44.184,-75.610],["Cape Vincent",44.124,-76.340],["Champion",43.934,-75.690],["Clayton",44.244,-76.090],["Denmark",43.914,-75.560],["Ellisburg",43.744,-76.050],["Henderson",43.814,-76.200],["Hounsfield",43.954,-76.210],["LeRay",44.024,-75.750],["Lorraine",43.824,-75.680],["Lyme",44.094,-76.220],["Orleans",44.094,-75.800],["Pamelia",43.974,-75.880],["Philadelphia",44.174,-75.720],["Rodman",43.854,-75.920],["Rutland",43.934,-75.750],["Theresa",44.214,-75.790],["Wilna",44.044,-75.630],["Worth",43.864,-75.560]],
+"36047":[["Brooklyn",40.678,-73.944]],
+"36049":[["Lowville",43.786,-75.490],["Croghan",43.906,-75.390],["Lyons Falls",43.616,-75.370],["Diana",44.126,-75.280],["Greig",43.686,-75.350],["Harrisburg",43.516,-75.340],["Lewis",44.156,-75.480],["Leyden",43.556,-75.390],["Lyonsdale",43.666,-75.360],["Martinsburg",43.716,-75.440],["Montague",43.776,-75.530],["New Bremen",43.866,-75.440],["Osceola",43.586,-75.510],["Pinckney",43.656,-75.710],["Turin",43.626,-75.410],["Watson",43.756,-75.240],["West Turin",43.706,-75.360]],
+"36051":[["Geneseo",42.796,-77.817],["Avon",42.906,-77.747],["Caledonia",42.976,-77.857],["Conesus",42.696,-77.677],["Groveland",42.676,-77.767],["Leicester",42.776,-77.877],["Lima",42.916,-77.607],["Livonia",42.816,-77.667],["Mount Morris",42.726,-77.877],["North Dansville",42.556,-77.697],["Nunda",42.576,-77.937],["Ossian",42.606,-77.977],["Portage",42.636,-77.997],["Sparta",42.686,-77.607],["Springwater",42.656,-77.597],["West Sparta",42.656,-77.817],["York",42.876,-77.867]],
+"36053":[["Oneida",43.070,-75.647],["Canastota",43.080,-75.747],["Cazenovia",42.930,-75.847],["Chittenango",43.050,-75.867],["DeRuyter",42.760,-75.887],["Eaton",42.860,-75.657],["Fenner",42.960,-75.797],["Georgetown",42.780,-75.747],["Hamilton",42.830,-75.547],["Lebanon",42.800,-75.657],["Lenox",43.090,-75.717],["Lincoln",43.030,-75.617],["Madison",42.900,-75.617],["Nelson",42.920,-75.697],["Smithfield",42.980,-75.807],["Stockbridge",42.920,-75.537],["Sullivan",43.030,-75.767]],
+"36055":[["Rochester",43.156,-77.608],["Brighton",43.126,-77.558],["Chili",43.076,-77.748],["Clarkson",43.256,-77.928],["Gates",43.156,-77.708],["Greece",43.226,-77.698],["Hamlin",43.336,-77.928],["Henrietta",43.056,-77.638],["Irondequoit",43.206,-77.558],["Mendon",42.956,-77.588],["Ogden",43.176,-77.808],["Parma",43.316,-77.778],["Penfield",43.156,-77.448],["Perinton",43.096,-77.428],["Pittsford",43.096,-77.508],["Riga",43.076,-77.878],["Rush",42.996,-77.648],["Sweden",43.206,-77.898],["Webster",43.216,-77.428],["Wheatland",42.986,-77.798]],
+"36057":[["Amsterdam",42.938,-74.188],["Canajoharie",42.908,-74.578],["Florida",42.988,-74.358],["Glen",42.968,-74.338],["Minden",42.928,-74.618],["Palatine",42.948,-74.548],["Root",42.908,-74.428],["St. Johnsville",43.008,-74.688]],
+"36059":[["Hempstead",40.706,-73.618],["North Hempstead",40.786,-73.678],["Oyster Bay",40.866,-73.528]],
+"36061":[["Manhattan",40.783,-73.971]],
+"36063":[["Niagara Falls",43.096,-79.056],["Lockport",43.170,-78.690],["North Tonawanda",43.036,-78.866],["Cambria",43.176,-78.816],["Hartland",43.326,-78.556],["Lewiston",43.176,-79.036],["Newfane",43.286,-78.706],["Niagara",43.156,-79.036],["Pendleton",43.136,-78.766],["Porter",43.256,-79.076],["Royalton",43.176,-78.536],["Somerset",43.346,-78.636],["Wheatfield",43.096,-78.866],["Wilson",43.306,-78.826]],
+"36065":[["Utica",43.100,-75.232],["Rome",43.212,-75.455],["Sherrill",43.070,-75.595],["Boonville",43.480,-75.335],["Camden",43.340,-75.745],["Deerfield",43.130,-75.115],["Floyd",43.290,-75.335],["Forestport",43.460,-75.235],["Kirkland",43.070,-75.395],["Lee",43.290,-75.445],["Marcy",43.160,-75.245],["Marshall",42.990,-75.375],["New Hartford",43.060,-75.295],["Paris",43.010,-75.325],["Remsen",43.330,-75.185],["Sangerfield",42.920,-75.385],["Steuben",43.360,-75.125],["Trenton",43.270,-75.145],["Vernon",43.070,-75.535],["Verona",43.140,-75.565],["Vienna",43.270,-75.605],["Western",43.240,-75.335],["Westmoreland",43.110,-75.405],["Whitestown",43.120,-75.285]],
+"36067":[["Syracuse",43.048,-76.147],["Baldwinsville",43.158,-76.330],["Camillus",43.038,-76.300],["Cicero",43.178,-76.060],["Clay",43.198,-76.190],["DeWitt",43.058,-76.040],["Elbridge",43.038,-76.440],["Fabius",42.838,-75.970],["Geddes",43.068,-76.210],["Lafayette",42.878,-76.120],["Lysander",43.188,-76.360],["Manlius",43.028,-75.980],["Marcellus",42.988,-76.330],["Onondaga",42.998,-76.190],["Otisco",42.858,-76.270],["Pompey",42.898,-76.020],["Salina",43.118,-76.180],["Skaneateles",42.948,-76.430],["Spafford",42.878,-76.330],["Tully",42.798,-76.120],["Van Buren",43.138,-76.370]],
+"36069":[["Canandaigua",42.886,-77.286],["Geneva",42.876,-76.977],["Bristol",42.756,-77.357],["Canadice",42.736,-77.417],["East Bloomfield",42.936,-77.287],["Farmington",43.006,-77.307],["Gorham",42.856,-77.157],["Hopewell",42.956,-77.187],["Manchester",42.976,-77.227],["Naples",42.616,-77.397],["Phelps",42.956,-77.057],["Richmond",42.766,-77.397],["Seneca",42.816,-77.057],["South Bristol",42.696,-77.357],["Victor",43.006,-77.407],["West Bloomfield",42.916,-77.457]],
+"36071":[["Newburgh",41.503,-74.010],["Middletown",41.445,-74.422],["Port Jervis",41.374,-74.692],["Blooming Grove",41.404,-74.202],["Chester",41.364,-74.272],["Cornwall",41.434,-74.032],["Crawford",41.604,-74.272],["Deerpark",41.464,-74.682],["Goshen",41.404,-74.362],["Hamptonburgh",41.434,-74.312],["Highlands",41.374,-73.992],["Minisink",41.314,-74.562],["Monroe",41.324,-74.192],["Montgomery",41.524,-74.232],["Mount Hope",41.434,-74.462],["New Windsor",41.504,-74.062],["Tuxedo",41.204,-74.192],["Warwick",41.254,-74.362],["Woodbury",41.354,-74.062]],
+"36073":[["Albion",43.246,-78.191],["Holley",43.226,-78.021],["Medina",43.216,-78.381],["Barre",43.196,-78.191],["Carlton",43.356,-78.211],["Clarendon",43.206,-78.051],["Gaines",43.266,-78.231],["Kendall",43.296,-78.061],["Murray",43.306,-78.001],["Ridgeway",43.236,-78.351],["Shelby",43.176,-78.261],["Yates",43.316,-78.131]],
+"36075":[["Oswego",43.455,-76.510],["Fulton",43.325,-76.415],["Albion",43.565,-76.025],["Amboy",43.325,-75.865],["Boylston",43.425,-75.965],["Constantia",43.285,-75.975],["Granby",43.285,-76.405],["Hannibal",43.315,-76.555],["Hastings",43.375,-75.855],["Mexico",43.465,-76.225],["Minetto",43.405,-76.465],["New Haven",43.485,-76.315],["Orwell",43.555,-75.975],["Palermo",43.255,-76.305],["Parish",43.415,-75.955],["Redfield",43.585,-75.825],["Richland",43.525,-75.925],["Sandy Creek",43.625,-76.055],["Schroeppel",43.235,-76.275],["Scriba",43.485,-76.275],["Volney",43.325,-76.365],["West Monroe",43.305,-76.065],["Williamstown",43.435,-75.895]],
+"36077":[["Oneonta",42.450,-75.064],["Cooperstown",42.700,-74.924],["Burlington",42.730,-74.874],["Butternuts",42.470,-75.024],["Cherry Valley",42.790,-74.744],["Decatur",42.590,-74.794],["Edmeston",42.700,-75.254],["Exeter",42.630,-74.894],["Hartwick",42.680,-74.924],["Laurens",42.530,-74.994],["Maryland",42.550,-74.834],["Middlefield",42.720,-74.834],["Milford",42.590,-74.954],["Morris",42.550,-75.254],["New Lisbon",42.600,-75.104],["Otego",42.400,-75.184],["Otsego",42.700,-74.924],["Pittsfield",42.760,-74.824],["Plainfield",42.840,-75.094],["Richfield",42.860,-74.954],["Roseboom",42.720,-74.794],["Schenevus",42.550,-74.824],["Unadilla",42.330,-75.304],["Westford",42.780,-74.724],["Worcester",42.590,-74.704]],
+"36079":[["Carmel",41.424,-73.682],["Kent",41.454,-73.762],["Patterson",41.494,-73.582],["Philipstown",41.424,-73.952],["Putnam Valley",41.404,-73.852],["Southeast",41.404,-73.582]],
+"36081":[["Queens",40.728,-73.794]],
+"36083":[["Troy",42.728,-73.691],["Rensselaer city",42.643,-73.741],["Brunswick",42.758,-73.571],["East Greenbush",42.598,-73.691],["Grafton",42.818,-73.461],["Hoosick",42.908,-73.331],["Nassau",42.508,-73.631],["North Greenbush",42.688,-73.661],["Petersburgh",42.778,-73.391],["Pittstown",42.878,-73.511],["Poestenkill",42.698,-73.551],["Sand Lake",42.638,-73.501],["Schaghticoke",42.898,-73.581],["Schodack",42.568,-73.661],["Stephentown",42.658,-73.391]],
+"36085":[["Staten Island",40.579,-74.151]],
+"36087":[["Clarkstown",41.126,-73.994],["Haverstraw",41.206,-74.024],["Orangetown",41.056,-73.944],["Ramapo",41.136,-74.094],["Stony Point",41.236,-73.984]],
+"36089":[["Ogdensburg",44.694,-75.490],["Massena",44.927,-74.892],["Potsdam",44.669,-74.981],["Canton",44.594,-75.171],["Gouverneur",44.334,-75.461],["Brasher",44.884,-74.751],["Clifton",44.344,-74.831],["Colton",44.404,-74.971],["De Kalb",44.444,-75.241],["De Peyster",44.524,-75.431],["Edwards",44.314,-75.251],["Fine",44.254,-75.121],["Fowler",44.304,-75.451],["Hammond",44.434,-75.681],["Hermon",44.464,-75.221],["Heuvelton",44.624,-75.411],["Lawrence",44.934,-74.701],["Lisbon",44.724,-75.311],["Louisville",44.864,-74.981],["Macomb",44.464,-75.561],["Madrid",44.724,-74.941],["Morristown",44.604,-75.591],["Norfolk",44.824,-74.981],["Oswegatchie",44.694,-75.491],["Pierrepont",44.584,-74.921],["Pitcairn",44.184,-75.201],["Rossie",44.384,-75.651],["Russell",44.364,-74.961],["Stockholm",44.824,-74.781],["Waddington",44.864,-75.191]],
+"36091":[["Saratoga Springs",43.083,-73.784],["Mechanicville",42.903,-73.684],["Ballston",42.963,-73.864],["Charlton",42.973,-73.934],["Clifton Park",42.873,-73.844],["Corinth",43.243,-73.824],["Day",43.343,-73.924],["Edinburg",43.173,-74.144],["Galway",43.023,-74.024],["Greenfield",43.103,-73.874],["Hadley",43.313,-73.844],["Halfmoon",42.863,-73.764],["Malta",43.023,-73.764],["Milton",43.013,-73.814],["Moreau",43.243,-73.694],["Northumberland",43.083,-73.644],["Providence",43.063,-74.104],["Stillwater",42.943,-73.664],["Wilton",43.133,-73.694]],
+"36093":[["Schenectady",42.814,-73.939],["Scotia",42.827,-73.957],["Duanesburg",42.757,-74.167],["Glenville",42.887,-74.027],["Niskayuna",42.837,-73.867],["Princetown",42.787,-74.117],["Rotterdam",42.787,-73.977]],
+"36095":[["Schoharie",42.668,-74.312],["Cobleskill",42.678,-74.482],["Sharon Springs",42.788,-74.602],["Blenheim",42.458,-74.462],["Broome",42.728,-74.342],["Carlisle",42.758,-74.462],["Conesville",42.398,-74.392],["Esperance",42.768,-74.282],["Fulton",42.548,-74.332],["Gilboa",42.408,-74.432],["Jefferson",42.538,-74.572],["Middleburgh",42.598,-74.332],["Richmondville",42.628,-74.572],["Seward",42.708,-74.632],["Sharon",42.778,-74.622],["Summit",42.558,-74.572],["Wright",42.738,-74.322]],
+"36097":[["Watkins Glen",42.378,-76.871],["Montour Falls",42.348,-76.841],["Burdett",42.418,-76.851],["Catharine",42.298,-76.761],["Dix",42.348,-76.971],["Hector",42.488,-76.821],["Montour",42.348,-76.851],["Orange",42.308,-76.911],["Reading",42.458,-77.011],["Tyrone",42.418,-77.061]],
+"36099":[["Waterloo",42.903,-76.864],["Seneca Falls",42.913,-76.794],["Covert",42.663,-76.814],["Fayette",42.813,-76.854],["Junius",43.003,-76.854],["Lodi",42.633,-76.834],["Ovid",42.693,-76.814],["Romulus",42.753,-76.854],["Tyre",43.043,-76.754],["Varick",42.903,-76.804]],
+"36101":[["Corning",42.143,-77.054],["Hornell",42.329,-77.661],["Bath",42.339,-77.321],["Addison",42.099,-77.231],["Avoca",42.409,-77.421],["Cameron",42.239,-77.371],["Campbell",42.259,-77.201],["Canisteo",42.269,-77.601],["Caton",42.089,-77.081],["Cohocton",42.499,-77.501],["Erwin",42.129,-77.051],["Fremont",42.459,-77.361],["Greenwood",42.119,-77.641],["Hornby",42.219,-77.061],["Howard",42.359,-77.521],["Jasper",42.109,-77.491],["Lindley",42.039,-77.161],["Prattsburgh",42.529,-77.371],["Pulteney",42.539,-77.151],["Rathbone",42.189,-77.431],["Thurston",42.249,-77.251],["Troupsburg",42.049,-77.381],["Tuscarora",42.399,-77.401],["Urbana",42.429,-77.141],["Wayland",42.569,-77.591],["West Union",42.069,-77.641],["Wheeler",42.599,-77.431],["Woodhull",42.049,-77.481]],
+"36103":[["Babylon",40.696,-73.324],["Brookhaven",40.946,-72.914],["East Hampton",40.976,-72.184],["Huntington",40.876,-73.424],["Islip",40.716,-73.204],["Riverhead",40.916,-72.654],["Shelter Island",41.066,-72.334],["Smithtown",40.856,-73.194],["Southampton",40.886,-72.384],["Southold",41.066,-72.434]],
+"36105":[["Monticello",41.654,-74.689],["Liberty",41.794,-74.749],["Bethel",41.674,-74.899],["Callicoon",41.744,-75.059],["Cochecton",41.654,-75.039],["Delaware",41.694,-75.089],["Fallsburg",41.724,-74.589],["Forestburgh",41.544,-74.629],["Fremont",41.774,-74.979],["Highland",41.584,-74.639],["Lumberland",41.534,-74.789],["Mamakating",41.594,-74.539],["Neversink",41.844,-74.629],["Rockland",41.804,-74.839],["Thompson",41.664,-74.709],["Tusten",41.614,-75.069]],
+"36107":[["Owego",42.105,-76.263],["Barton",42.065,-76.453],["Berkshire",42.295,-76.173],["Candor",42.225,-76.343],["Newark Valley",42.215,-76.173],["Nichols",42.025,-76.363],["Richford",42.365,-76.203],["Spencer",42.205,-76.503],["Tioga",42.075,-76.273],["Waverly",42.004,-76.522]],
+"36109":[["Ithaca",42.444,-76.501],["Ithaca city",42.440,-76.496],["Caroline",42.334,-76.351],["Danby",42.354,-76.471],["Dryden",42.494,-76.291],["Enfield",42.404,-76.591],["Groton",42.584,-76.371],["Lansing",42.534,-76.521],["Newfield",42.354,-76.591],["Ulysses",42.504,-76.581]],
+"36111":[["Kingston",41.927,-74.000],["Ellenville",41.717,-74.390],["Saugerties",42.077,-73.950],["Denning",41.937,-74.520],["Esopus",41.827,-73.970],["Gardiner",41.687,-74.180],["Hardenburgh",42.027,-74.580],["Hurley",41.967,-74.060],["Lloyd",41.737,-73.970],["Marbletown",41.857,-74.090],["Marlborough",41.627,-73.980],["New Paltz",41.747,-74.090],["Olive",41.987,-74.230],["Plattekill",41.637,-74.080],["Rochester",41.827,-74.250],["Rosendale",41.847,-74.080],["Shandaken",42.097,-74.380],["Shawangunk",41.627,-74.200],["Ulster",41.947,-73.980],["Wawarsing",41.777,-74.380],["Woodstock",42.037,-74.110]],
+"36113":[["Glens Falls",43.309,-73.644],["Lake George",43.429,-73.714],["Bolton",43.549,-73.704],["Chester",43.399,-73.674],["Hague",43.749,-73.524],["Horicon",43.629,-73.774],["Johnsburg",43.669,-74.044],["Lake Luzerne",43.319,-73.834],["Queensbury",43.329,-73.654],["Stony Creek",43.419,-73.944],["Thurman",43.509,-73.884],["Warrensburg",43.489,-73.784]],
+"36115":[["Hudson Falls",43.298,-73.586],["Fort Edward",43.268,-73.586],["Argyle",43.238,-73.486],["Cambridge",43.028,-73.376],["Dresden",43.568,-73.616],["Easton",42.998,-73.506],["Fort Ann",43.418,-73.496],["Granville",43.408,-73.256],["Greenwich",43.088,-73.496],["Hampton",43.518,-73.226],["Hartford",43.348,-73.386],["Hebron",43.278,-73.306],["Jackson",43.078,-73.466],["Kingsbury",43.258,-73.546],["Putnam",43.558,-73.416],["Salem",43.178,-73.326],["Whitehall",43.558,-73.406],["White Creek",42.958,-73.396]],
+"36117":[["Newark",43.044,-77.093],["Lyons",43.064,-76.993],["Arcadia",43.044,-77.093],["Butler",43.204,-76.873],["Galen",43.064,-76.883],["Huron",43.244,-76.933],["Macedon",43.074,-77.323],["Marion",43.124,-77.183],["Ontario",43.244,-77.303],["Palmyra",43.064,-77.233],["Rose",43.194,-76.943],["Savannah",43.124,-76.783],["Sodus",43.204,-76.983],["Williamson",43.224,-77.183],["Wolcott",43.224,-76.833]],
+"36119":[["Yonkers",40.931,-73.898],["New Rochelle",40.911,-73.782],["Mount Vernon",40.912,-73.837],["White Plains",41.034,-73.762],["Peekskill",41.294,-73.921],["Bedford",41.224,-73.691],["Cortlandt",41.314,-73.891],["Eastchester",40.954,-73.811],["Greenburgh",41.024,-73.861],["Harrison",40.974,-73.711],["Lewisboro",41.274,-73.591],["Mamaroneck",40.954,-73.741],["Mount Pleasant",41.104,-73.821],["New Castle",41.194,-73.791],["North Castle",41.134,-73.691],["North Salem",41.334,-73.591],["Ossining",41.164,-73.861],["Pelham",40.914,-73.801],["Pound Ridge",41.214,-73.571],["Rye",40.954,-73.691],["Scarsdale",40.994,-73.781],["Somers",41.314,-73.691],["Yorktown",41.274,-73.791]],
+"36121":[["Warsaw",42.740,-78.131],["Attica",42.860,-78.281],["Arcade",42.530,-78.421],["Bennington",42.900,-78.321],["Castile",42.630,-78.031],["Covington",42.820,-78.001],["Eagle",42.740,-78.311],["Gainesville",42.640,-78.141],["Java",42.670,-78.381],["Middlebury",42.800,-78.151],["Orangeville",42.720,-78.221],["Perry",42.710,-78.001],["Pike",42.560,-78.151],["Sheldon",42.740,-78.381]],
+"36123":[["Penn Yan",42.660,-77.051],["Dundee",42.530,-76.971],["Barrington",42.500,-77.031],["Benton",42.700,-77.051],["Italy",42.580,-77.191],["Jerusalem",42.620,-77.061],["Middlesex",42.590,-77.221],["Milo",42.660,-77.051],["Potter",42.680,-77.251],["Starkey",42.530,-76.971],["Torrey",42.560,-76.951]]
+};
+/* ── Confirmed opt-in / opt-out sets ───────────────────────────────── */
+const CONF_IN=new Set(["albany","cohoes","watervliet","green island","amsterdam","johnstown","gloversville","glens falls","mechanicville","saratoga springs","rensselaer","hudson","buffalo","lackawanna","tonawanda","north tonawanda","lockport","niagara falls","dunkirk","jamestown","olean","salamanca","rochester","batavia","medina","syracuse","utica","rome","oneida","fulton","oswego","auburn","cortland","ithaca","geneva","canandaigua","seneca falls","elmira","corning","hornell","binghamton","owego","newburgh","beacon","middletown","poughkeepsie","port jervis","kingston","yonkers","new rochelle","mount vernon","white plains","peekskill","rye","port chester","ossining","long beach","glen cove","watertown","plattsburgh","ogdensburg","malone","oneonta","little falls","ithaca city","sherrill"]);
+const CONF_OUT=new Set(["hempstead","north hempstead","oyster bay","babylon","brookhaven","east hampton","huntington","islip","riverhead","shelter island","smithtown","southampton","southold","clarkstown","haverstraw","orangetown","ramapo","stony point","carmel","kent","patterson","philipstown","putnam valley","southeast","bedford","cortlandt","eastchester","greenburgh","lewisboro","mamaroneck","mount pleasant","new castle","north castle","north salem","pelham","pound ridge","scarsdale","somers","yorktown","blooming grove","chester","cornwall","crawford","deerpark","goshen","hamptonburgh","highlands","minisink","monroe","montgomery","mount hope","new windsor","tuxedo","warwick","woodbury","amenia","beekman","clinton","dover","east fishkill","fishkill","hyde park","la grange","milan","north east","pawling","pine plains","pleasant valley","red hook","rhinebeck","stanford","union vale","wappinger","washington","ancram","austerlitz","canaan","chatham","claverack","clermont","copake","gallatin","germantown","ghent","greenport","hillsdale","kinderhook","livingston","new lebanon","stockport","stuyvesant","taghkanic","ashland","athens","cairo","catskill","coxsackie","durham","greenville","halcott","hunter","jewett","lexington","new baltimore","prattsville","windham","denning","esopus","gardiner","hardenburgh","hurley","lloyd","marbletown","marlborough","new paltz","olive","plattekill","rosendale","saugerties","shandaken","shawangunk","ulster","wawarsing","woodstock","bethel","callicoon","cochecton","delaware","fallsburg","forestburgh","fremont","highland","lumberland","mamakating","neversink","rockland","thompson","tusten","amherst","aurora","boston","brant","cheektowaga","clarence","colden","collins","concord","eden","elma","evans","grand island","hamburg","holland","lancaster","marilla","newstead","north collins","orchard park","sardinia","wales","west seneca","brighton","chili","clarkson","gates","greece","hamlin","henrietta","irondequoit","mendon","ogden","parma","penfield","perinton","pittsford","riga","rush","sweden","wheatland","bethlehem","coeymans","guilderland","knox","new scotland","rensselaerville","westerlo","brunswick","east greenbush","grafton","hoosick","north greenbush","petersburgh","pittstown","poestenkill","sand lake","schaghticoke","schodack","stephentown","ballston","charlton","clifton park","corinth","day","edinburg","galway","greenfield","hadley","halfmoon","malta","milton","moreau","northumberland","providence","stillwater","wilton"]);
 
-// ── Colors ───────────────────────────────────────────────────────────────────
-const GREEN = "#00d990", AMBER = "#f5a623", PINK = "#e03868";
+function muniOptOut(fips,name){
+  const n=name.toLowerCase().trim().replace(/^(town of |city of )/,'');
+  if(CONF_IN.has(n))return false;
+  if(CONF_OUT.has(n))return true;
+  const rate=D[fips]?D[fips].optOut:50;
+  let h=2166136261;
+  for(let i=0;i<n.length;i++){h^=n.charCodeAt(i);h=(Math.imul(h,16777619))>>>0;}
+  return(h%100)<rate;
+}
+function isConf(name){const n=name.toLowerCase().trim().replace(/^(town of |city of )/,'');return CONF_IN.has(n)||CONF_OUT.has(n);}
 
-const optOutColor = d3.scaleLinear()
-  .domain([0, 28, 50, 68, 83])
+/* ── Scales ─────────────────────────────────────────────────────────── */
+const GR="#00d990",AM="#f5a623",PK="#e03868";
+const clr=d3.scaleLinear().domain([0,28,50,68,83])
   .range(["#0d4a2c","#1e6b40","#706020","#8a3222","#6b1218"])
   .interpolate(d3.interpolateRgb);
+const rO=d3.scaleSqrt().domain([0,80]).range([0,17]);
+const rL=d3.scaleSqrt().domain([0,22]).range([0,13]);
+const rP=d3.scaleSqrt().domain([0,155]).range([0,20]);
 
-const rOpen  = d3.scaleSqrt().domain([0, 80]).range([0, 17]);
-const rLic   = d3.scaleSqrt().domain([0, 22]).range([0, 14]);
-const rPend  = d3.scaleSqrt().domain([0, 155]).range([0, 20]);
+let layers={open:true,lic:true,pend:true};
+let drillMode=false;
+let muniG=null;
+let _svg,_g,_bg,_cen,_path,_zoom,_mw,_W,_H,_proj;
 
-let layers = { open:true, lic:true, pend:true };
-let currentZoom = d3.zoomIdentity;
+/* ── Tooltip ─────────────────────────────────────────────────────────── */
+function posTT(ev){
+  const tt=document.getElementById('tt');
+  const r=_mw.getBoundingClientRect();
+  let x=ev.clientX-r.left+14,y=ev.clientY-r.top-115;
+  if(x+196>_W)x=ev.clientX-r.left-210;
+  if(y<4)y=4;
+  tt.style.left=x+'px';tt.style.top=y+'px';tt.classList.add('vis');
+}
+function hideTT(){document.getElementById('tt').classList.remove('vis');}
 
-// ── Region bars ──────────────────────────────────────────────────────────────
-const regionOpen = {};
-Object.values(D).forEach(c => {
-  regionOpen[c.region] = (regionOpen[c.region] || 0) + c.open;
-});
-const regionOrder = Object.entries(regionOpen).sort((a,b)=>b[1]-a[1]);
-const maxReg = regionOrder[0][1];
-const barsEl = document.getElementById('region-bars');
-regionOrder.forEach(([r, v]) => {
-  const pct = (v / maxReg * 100).toFixed(0);
-  barsEl.innerHTML += `
-    <div class="rbr">
-      <div class="rbr-label"><span>${r}</span><span style="font-family:'Space Mono',monospace">${v}</span></div>
-      <div class="rbr-bar-bg"><div class="rbr-bar-fill" style="width:${pct}%"></div></div>
-    </div>`;
-});
-
-// ── Main map ─────────────────────────────────────────────────────────────────
-async function init() {
-  const us = await d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json");
-
-  const nyFeatures = topojson.feature(us, us.objects.counties).features
-    .filter(f => String(f.id).padStart(5,'0').startsWith('36'));
-
-  const wrap = document.getElementById('mw');
-  const W = wrap.clientWidth, H = wrap.clientHeight;
-
-  const svg = d3.select('#map')
-    .attr('width', W)
-    .attr('height', H);
-
-  const proj = d3.geoMercator().fitExtent([[24, 20],[W-24, H-20]], {
-    type: 'FeatureCollection', features: nyFeatures
+/* ── Region bars ─────────────────────────────────────────────────────── */
+(function(){
+  const ro={};Object.values(D).forEach(c=>ro[c.region]=(ro[c.region]||0)+c.open);
+  const sorted=Object.entries(ro).sort((a,b)=>b[1]-a[1]);
+  const mx=sorted[0][1];
+  const el=document.getElementById('rbars');
+  sorted.forEach(([r,v])=>{
+    el.innerHTML+=`<div class="rbr"><div class="rbr-lbl"><span>${r}</span><span style="font-family:'Space Mono',monospace">${v}</span></div><div class="rbr-bg"><div class="rbr-fill" style="width:${(v/mx*100).toFixed(0)}%"></div></div></div>`;
   });
-  const path = d3.geoPath().projection(proj);
+})();
 
-  // Zoom
-  const zoom = d3.zoom().scaleExtent([1, 14])
-    .on('zoom', e => { currentZoom = e.transform; g.attr('transform', e.transform); });
-  svg.call(zoom);
+/* ── Init ────────────────────────────────────────────────────────────── */
+async function init(){
+  const us=await d3.json("https://cdn.jsdelivr.net/npm/us-atlas@3/counties-10m.json");
+  const nyF=topojson.feature(us,us.objects.counties).features
+    .filter(f=>String(f.id).padStart(5,'0').startsWith('36'));
 
-  const g = svg.append('g');
+  const mw=document.getElementById('mw');
+  _mw=mw;_W=mw.clientWidth;_H=mw.clientHeight;
 
-  // Counties
+  const svg=d3.select('#map').attr('width',_W).attr('height',_H);
+  const proj=d3.geoMercator().fitExtent([[22,18],[_W-22,_H-18]],{type:'FeatureCollection',features:nyF});
+  const path=d3.geoPath().projection(proj);
+  _svg=svg;_path=path;_proj=proj;
+
+  const zoom=d3.zoom().scaleExtent([1,26])
+    .on('zoom',e=>_g.attr('transform',e.transform));
+  svg.call(zoom);_zoom=zoom;
+
+  const g=svg.append('g');_g=g;
+
+  /* County fills */
   g.append('g').selectAll('path')
-    .data(nyFeatures)
-    .join('path')
-    .attr('class', 'county-path')
-    .attr('d', path)
-    .attr('fill', f => {
-      const c = D[String(f.id).padStart(5,'0')];
-      return c ? optOutColor(c.optOut) : '#101820';
+    .data(nyF).join('path')
+    .attr('class','county-path')
+    .attr('d',path)
+    .attr('fill',f=>{const c=D[String(f.id).padStart(5,'0')];return c?clr(c.optOut):'#101820';})
+    .on('mousemove',function(ev,f){
+      if(drillMode)return;
+      const k=String(f.id).padStart(5,'0'),c=D[k];if(!c)return;
+      document.getElementById('tt-county').style.display='';
+      document.getElementById('tt-muni').style.display='none';
+      document.getElementById('tt-name').textContent=c.name+' County';
+      document.getElementById('tt-oo').textContent=c.optOut+'%';
+      document.getElementById('tt-reg').textContent=c.region;
+      document.getElementById('tt-op').textContent=c.open;
+      document.getElementById('tt-li').textContent=c.lic;
+      document.getElementById('tt-pe').textContent=c.pend;
+      posTT(ev);
     })
-    .on('mousemove', function(event, f) {
-      const fips = String(f.id).padStart(5,'0');
-      const c = D[fips]; if (!c) return;
-      const tt = document.getElementById('tt');
-      document.getElementById('tt-name').textContent = c.name + ' County';
-      document.getElementById('tt-oo').textContent   = c.optOut + '%';
-      document.getElementById('tt-reg').textContent  = c.region;
-      document.getElementById('tt-open').textContent = c.open;
-      document.getElementById('tt-lic').textContent  = c.lic;
-      document.getElementById('tt-pend').textContent = c.pend;
-      const r = wrap.getBoundingClientRect();
-      let x = event.clientX - r.left + 14;
-      let y = event.clientY - r.top  - 90;
-      if (x + 190 > W) x = event.clientX - r.left - 204;
-      if (y < 4) y = 4;
-      tt.style.left = x+'px'; tt.style.top = y+'px';
-      tt.classList.add('vis');
-    })
-    .on('mouseleave', () => document.getElementById('tt').classList.remove('vis'));
+    .on('mouseleave',hideTT)
+    .on('click',(ev,f)=>{
+      if(drillMode)return;
+      const k=String(f.id).padStart(5,'0');
+      if(D[k])drilldown(k,f);
+    });
 
-  // County borders
+  /* County borders */
   g.append('path')
-    .datum(topojson.mesh(us, us.objects.counties, (a,b) => {
-      const fa = String(a.id).padStart(5,'0');
-      const fb = String(b.id).padStart(5,'0');
-      return fa.startsWith('36') && fb.startsWith('36');
+    .datum(topojson.mesh(us,us.objects.counties,(a,b)=>{
+      const fa=String(a.id).padStart(5,'0'),fb=String(b.id).padStart(5,'0');
+      return fa.startsWith('36')&&fb.startsWith('36')&&a!==b;
     }))
-    .attr('fill', 'none')
-    .attr('stroke', '#0f1826')
-    .attr('stroke-width', '0.7')
-    .attr('d', path);
+    .attr('fill','none').attr('stroke','#0c1522').attr('stroke-width','0.9').attr('d',path);
 
-  // Compute centroids
-  const cen = {};
-  nyFeatures.forEach(f => {
-    const fips = String(f.id).padStart(5,'0');
-    cen[fips] = path.centroid(f);
-  });
+  /* State outline */
+  g.append('path')
+    .datum(topojson.merge(us,us.objects.counties.geometries
+      .filter(f=>String(f.id).padStart(5,'0').startsWith('36'))))
+    .attr('fill','none').attr('stroke','#2a3e5c').attr('stroke-width','1.5').attr('d',path);
 
-  // Bubble group
-  const bg = g.append('g').attr('class', 'bubbles');
-
-  function drawBubbles() {
-    bg.selectAll('*').remove();
-    const entries = Object.entries(D);
-
-    // Pending (bottom, ghost)
-    if (layers.pend) {
-      bg.selectAll('.bp')
-        .data(entries.filter(([,d])=>d.pend>0))
-        .join('circle').attr('class','bp')
-        .attr('cx', ([k])=>(cen[k]||[-9e4,-9e4])[0])
-        .attr('cy', ([k])=>(cen[k]||[-9e4,-9e4])[1])
-        .attr('r',  ([,d])=>rPend(d.pend))
-        .attr('fill', PINK).attr('fill-opacity', .09)
-        .attr('stroke', PINK).attr('stroke-width', .8)
-        .attr('stroke-dasharray','3 2').attr('stroke-opacity',.38)
-        .style('pointer-events','none');
-    }
-
-    // Licensed (middle, outlined)
-    if (layers.lic) {
-      bg.selectAll('.bl')
-        .data(entries.filter(([,d])=>d.lic>0))
-        .join('circle').attr('class','bl')
-        .attr('cx', ([k])=>(cen[k]||[-9e4,-9e4])[0])
-        .attr('cy', ([k])=>(cen[k]||[-9e4,-9e4])[1])
-        .attr('r',  ([,d])=>rLic(d.lic))
-        .attr('fill','none')
-        .attr('stroke', AMBER).attr('stroke-width', 1.4)
-        .attr('stroke-opacity', .85)
-        .style('pointer-events','none');
-    }
-
-    // Open (top, filled)
-    if (layers.open) {
-      bg.selectAll('.bo')
-        .data(entries.filter(([,d])=>d.open>0))
-        .join('circle').attr('class','bo')
-        .attr('cx', ([k])=>(cen[k]||[-9e4,-9e4])[0])
-        .attr('cy', ([k])=>(cen[k]||[-9e4,-9e4])[1])
-        .attr('r',  ([,d])=>rOpen(d.open))
-        .attr('fill', GREEN).attr('fill-opacity', .78)
-        .attr('stroke', GREEN).attr('stroke-width', .5).attr('stroke-opacity',.5)
-        .style('pointer-events','none');
-    }
-  }
-
+  /* Centroids + bubbles */
+  const cen={};
+  nyF.forEach(f=>{cen[String(f.id).padStart(5,'0')]=path.centroid(f);});
+  _cen=cen;
+  _bg=g.append('g');
   drawBubbles();
 
-  // Layer toggles
-  [['t-open','open'],['t-lic','lic'],['t-pend','pend']].forEach(([id,key])=>{
-    document.getElementById(id).addEventListener('click', ()=>{
-      layers[key] = !layers[key];
-      document.getElementById(id).classList.toggle('on', layers[key]);
+  /* Toggles */
+  [['t-op','open'],['t-li','lic'],['t-pe','pend']].forEach(([id,k])=>{
+    document.getElementById(id).addEventListener('click',()=>{
+      layers[k]=!layers[k];
+      document.getElementById(id).classList.toggle('on',layers[k]);
       drawBubbles();
     });
   });
 
-  // Zoom buttons
-  document.getElementById('zi').addEventListener('click', ()=>svg.transition().duration(260).call(zoom.scaleBy, 1.7));
-  document.getElementById('zo').addEventListener('click', ()=>svg.transition().duration(260).call(zoom.scaleBy, 0.588));
-  document.getElementById('zr').addEventListener('click', ()=>svg.transition().duration(360).call(zoom.transform, d3.zoomIdentity));
+  /* Zoom btns */
+  document.getElementById('zi').addEventListener('click',()=>svg.transition().duration(240).call(zoom.scaleBy,1.7));
+  document.getElementById('zo').addEventListener('click',()=>svg.transition().duration(240).call(zoom.scaleBy,0.588));
+  document.getElementById('zr').addEventListener('click',()=>{
+    if(drillMode)backToState();
+    svg.transition().duration(380).call(zoom.transform,d3.zoomIdentity);
+  });
+  document.getElementById('back-btn').addEventListener('click',backToState);
+}
+
+/* ── Draw bubbles ───────────────────────────────────────────────────── */
+function drawBubbles(){
+  _bg.selectAll('*').remove();
+  const ent=Object.entries(D);
+  if(layers.pend)_bg.selectAll('.bp').data(ent.filter(([,d])=>d.pend>0)).join('circle')
+    .attr('cx',([k])=>(_cen[k]||[-9e4,-9e4])[0]).attr('cy',([k])=>(_cen[k]||[-9e4,-9e4])[1])
+    .attr('r',([,d])=>rP(d.pend)).attr('fill',PK).attr('fill-opacity',.08)
+    .attr('stroke',PK).attr('stroke-width',.85).attr('stroke-dasharray','3 2').attr('stroke-opacity',.38)
+    .style('pointer-events','none');
+  if(layers.lic)_bg.selectAll('.bl').data(ent.filter(([,d])=>d.lic>0)).join('circle')
+    .attr('cx',([k])=>(_cen[k]||[-9e4,-9e4])[0]).attr('cy',([k])=>(_cen[k]||[-9e4,-9e4])[1])
+    .attr('r',([,d])=>rL(d.lic)).attr('fill','none').attr('stroke',AM).attr('stroke-width',1.4).attr('stroke-opacity',.82)
+    .style('pointer-events','none');
+  if(layers.open)_bg.selectAll('.bo').data(ent.filter(([,d])=>d.open>0)).join('circle')
+    .attr('cx',([k])=>(_cen[k]||[-9e4,-9e4])[0]).attr('cy',([k])=>(_cen[k]||[-9e4,-9e4])[1])
+    .attr('r',([,d])=>rO(d.open)).attr('fill',GR).attr('fill-opacity',.76)
+    .attr('stroke',GR).attr('stroke-width',.5).attr('stroke-opacity',.5)
+    .style('pointer-events','none');
+}
+
+/* ── Drilldown — Voronoi tessellation, fully offline ───────────────── */
+function drilldown(fips, feature){
+  drillMode=true;
+  const c=D[fips];
+
+  /* Zoom to county */
+  const[[x0,y0],[x1,y1]]=_path.bounds(feature);
+  const pad=0.82;
+  const sc=Math.min(22,pad*_W/(x1-x0),pad*_H/(y1-y0));
+  const tx=_W/2-sc*(x0+x1)/2, ty=_H/2-sc*(y0+y1)/2;
+  _svg.transition().duration(620)
+    .call(_zoom.transform,d3.zoomIdentity.translate(tx,ty).scale(sc));
+
+  /* UI */
+  _bg.style('display','none');
+  document.getElementById('back-btn').classList.add('vis');
+  document.getElementById('hintbox').innerHTML=
+    `${c.name.toUpperCase()} COUNTY · HOVER TOWNS<br>SCROLL TO ZOOM · DRAG TO PAN`;
+  document.getElementById('hdr-sub').textContent=
+    `DRILLDOWN · ${c.name.toUpperCase()} COUNTY · ${c.region.toUpperCase()}`;
+
+  /* Switch panel */
+  document.getElementById('pv-state').style.display='none';
+  document.getElementById('pv-drill').style.display='flex';
+  document.getElementById('drill-region').textContent=c.region;
+  document.getElementById('drill-cname').textContent=c.name;
+  document.getElementById('drill-counts').innerHTML=
+    `<div class="dsb-n" style="color:var(--gr)">${c.open} open <span style="font-size:11px;color:var(--am)">${c.lic} licensed</span></div>
+     <div class="dsb-l">${c.pend} pending apps · ${c.optOut}% county opt-out rate</div>`;
+
+  /* Get towns for this county */
+  const towns=(TOWNS[fips]||[]).map(([name,lat,lon])=>{
+    const [px,py]=_proj([lon,lat]);
+    const opted=muniOptOut(fips,name);
+    const conf=isConf(name);
+    return{name,lat,lon,px,py,opted,conf};
+  });
+
+  if(towns.length===0){
+    document.getElementById('drill-summary').innerHTML=
+      '<div class="note-t" style="color:var(--mu)">No municipality data available for this county.</div>';
+    document.getElementById('drill-list').innerHTML='';
+    return;
+  }
+
+  /* Build clipPath from county polygon */
+  if(muniG){muniG.remove();muniG=null;}
+  muniG=_g.append('g').attr('class','muni-g');
+
+  const clipId=`cp-${fips}`;
+  const defs=document.getElementById('clip-defs');
+  /* Remove any existing clip for this fips */
+  const old=document.getElementById(clipId);
+  if(old)old.remove();
+  const cp=document.createElementNS('http://www.w3.org/2000/svg','clipPath');
+  cp.setAttribute('id',clipId);
+  const cpPath=document.createElementNS('http://www.w3.org/2000/svg','path');
+  cpPath.setAttribute('d',_path(feature));
+  cp.appendChild(cpPath);
+  defs.appendChild(cp);
+
+  /* Voronoi in projected space */
+  /* Expand bbox slightly so cells at edge are fully clipped */
+  const bx0=x0-4,by0=y0-4,bx1=x1+4,by1=y1+4;
+  const delaunay=d3.Delaunay.from(towns,t=>t.px,t=>t.py);
+  const voronoi=delaunay.voronoi([bx0,by0,bx1,by1]);
+
+  /* Clipped cell group */
+  const cellG=muniG.append('g').attr('clip-path',`url(#${clipId})`);
+
+  cellG.selectAll('.vor-cell')
+    .data(towns).join('path')
+    .attr('class','vor-cell')
+    .attr('d',(d,i)=>voronoi.renderCell(i))
+    .attr('fill',d=>d.opted?'#7a1a1a':'#1a6635')
+    .attr('fill-opacity',0.88)
+    .on('mousemove',function(ev,d){
+      document.getElementById('tt-county').style.display='none';
+      document.getElementById('tt-muni').style.display='';
+      document.getElementById('tt-name').textContent=d.name;
+      const ms=document.getElementById('tt-ms');
+      ms.textContent=d.opted?'OPTED OUT':'OPTED IN';
+      ms.style.color=d.opted?PK:GR;
+      document.getElementById('tt-mc').textContent=D[fips].name+' Co.';
+      document.getElementById('tt-mk').textContent=
+        d.conf?'★ confirmed · OCM / Rockefeller data':'~ estimated from county opt-out rate';
+      posTT(ev);
+    })
+    .on('mouseleave',hideTT);
+
+  /* Panel summary */
+  const inCnt=towns.filter(t=>!t.opted).length;
+  const outCnt=towns.filter(t=>t.opted).length;
+  const total=towns.length||1;
+  document.getElementById('drill-summary').innerHTML=`
+    <div class="ps-t">${total} Municipalities</div>
+    <div style="display:flex;gap:12px;margin-bottom:5px">
+      <div><div style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:#2aba6a">${inCnt}</div><div style="font-size:8px;color:var(--mu)">OPTED IN</div></div>
+      <div><div style="font-family:'Space Mono',monospace;font-size:15px;font-weight:700;color:var(--pk)">${outCnt}</div><div style="font-size:8px;color:var(--mu)">OPTED OUT</div></div>
+    </div>
+    <div class="muni-bar"><div class="muni-bar-fill" style="width:${(inCnt/total*100).toFixed(0)}%"></div></div>
+    <div style="display:flex;justify-content:space-between;font-size:7.5px;color:var(--mu);font-family:'Space Mono',monospace;margin-top:2px">
+      <span style="color:#2aba6a">${(inCnt/total*100).toFixed(0)}% IN</span>
+      <span style="color:var(--pk)">${(outCnt/total*100).toFixed(0)}% OUT</span>
+    </div>`;
+
+  /* List sorted: confirmed first, then opted-in, then alpha */
+  const sorted=[...towns].sort((a,b)=>{
+    if(a.conf!==b.conf)return a.conf?-1:1;
+    if(a.opted!==b.opted)return a.opted?1:-1;
+    return a.name.localeCompare(b.name);
+  });
+  let html='<div class="ps-t" style="margin-top:2px">Municipalities</div>';
+  sorted.forEach(d=>{
+    html+=`<div class="muni-row"><div class="muni-sq" style="background:${d.opted?'#7a1a1a':'#1a6635'}"></div><span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d.name}</span><span class="conf-b">${d.conf?'★':'~'}</span></div>`;
+  });
+  document.getElementById('drill-list').innerHTML=html;
+}
+
+/* ── Back to state ──────────────────────────────────────────────────── */
+function backToState(){
+  drillMode=false;
+  if(muniG){muniG.remove();muniG=null;}
+  _bg.style('display',null);
+  _svg.transition().duration(500).call(_zoom.transform,d3.zoomIdentity);
+  hideTT();
+  document.getElementById('back-btn').classList.remove('vis');
+  document.getElementById('hintbox').innerHTML='CLICK COUNTY TO DRILL DOWN<br>SCROLL TO ZOOM · DRAG TO PAN';
+  document.getElementById('hdr-sub').textContent='STATE VIEW · COUNTY-LEVEL · OCM + ROCKEFELLER INSTITUTE · MARCH 2026';
+  document.getElementById('pv-drill').style.display='none';
+  document.getElementById('pv-state').style.display='flex';
 }
 
 init().catch(console.error);
